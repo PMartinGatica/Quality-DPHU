@@ -1,8 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
-const PivotTreeView = ({ data }) => {
+const PivotTreeView = ({ data, isDarkMode = true }) => {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
+
+  const themeClasses = {
+    container: isDarkMode ? 'bg-gray-800' : 'bg-white',
+    header: isDarkMode ? 'border-gray-700' : 'border-gray-200',
+    text: {
+      primary: isDarkMode ? 'text-white' : 'text-gray-900',
+      secondary: isDarkMode ? 'text-gray-400' : 'text-gray-500',
+      muted: isDarkMode ? 'text-gray-400' : 'text-gray-500'
+    },
+    hover: isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'
+  };
 
   const hierarchyData = useMemo(() => {
     const result = {};
@@ -89,27 +100,27 @@ const PivotTreeView = ({ data }) => {
     return (
       <div key={nodeId} className="select-none">
         <div 
-          className={`flex items-center py-1 px-2 hover:bg-gray-700 cursor-pointer ${
+          className={`flex items-center py-1 px-2 cursor-pointer transition-colors ${
             level === 0 ? 'font-semibold' : ''
-          }`}
+          } ${themeClasses.hover}`}
           style={{ paddingLeft: `${level * 20 + 8}px` }}
           onClick={() => hasChildren && toggleNode(nodeId)}
         >
           {hasChildren ? (
             isExpanded ? (
-              <ChevronDown className="h-4 w-4 mr-2 text-gray-400" />
+              <ChevronDown className={`h-4 w-4 mr-2 ${themeClasses.text.secondary}`} />
             ) : (
-              <ChevronRight className="h-4 w-4 mr-2 text-gray-400" />
+              <ChevronRight className={`h-4 w-4 mr-2 ${themeClasses.text.secondary}`} />
             )
           ) : (
             <span className="w-6" />
           )}
           
-          <span className="text-xs text-gray-400 mr-2 min-w-[120px]">
+          <span className={`text-xs mr-2 min-w-[120px] ${themeClasses.text.muted}`}>
             {levelLabels[level] || 'DETALLE'}:
           </span>
           
-          <span className="flex-1 text-white">
+          <span className={`flex-1 ${themeClasses.text.primary}`}>
             {key}
           </span>
           
@@ -132,12 +143,12 @@ const PivotTreeView = ({ data }) => {
   };
 
   return (
-    <div className="h-full bg-gray-800 flex flex-col">
-      <div className="p-4 border-b border-gray-700 flex-shrink-0">
-        <h3 className="text-lg font-semibold text-white">
+    <div className={`h-full flex flex-col ${themeClasses.container}`}>
+      <div className={`p-4 border-b flex-shrink-0 ${themeClasses.header}`}>
+        <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>
           Vista Jerárquica DPHU
         </h3>
-        <p className="text-sm text-gray-400">
+        <p className={`text-sm ${themeClasses.text.secondary}`}>
           Haga clic en los elementos para expandir/contraer. Total: {data.length} registros
         </p>
       </div>

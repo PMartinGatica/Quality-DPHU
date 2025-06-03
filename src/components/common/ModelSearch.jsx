@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, ChevronDown } from 'lucide-react';
 
-const ModelSearch = ({ value, onChange, data }) => {
+const ModelSearch = ({ value, onChange, data, isDarkMode = true }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const inputRef = useRef(null);
+
+  const themeClasses = {
+    input: isDarkMode 
+      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:ring-blue-500' 
+      : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500',
+    dropdown: isDarkMode 
+      ? 'bg-gray-700 border-gray-600' 
+      : 'bg-white border-gray-300',
+    item: isDarkMode 
+      ? 'hover:bg-gray-600 text-white border-gray-600' 
+      : 'hover:bg-gray-100 text-gray-900 border-gray-200',
+    icon: isDarkMode ? 'text-gray-400' : 'text-gray-500'
+  };
 
   const allModels = React.useMemo(() => {
     const models = [...new Set(data.map(item => item.MODELO))].filter(Boolean);
@@ -65,26 +78,26 @@ const ModelSearch = ({ value, onChange, data }) => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar modelo (3+ caracteres)"
-          className="w-full p-2 pl-10 pr-10 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+          className={`w-full p-2 pl-10 pr-10 border rounded focus:ring-2 ${themeClasses.input}`}
         />
-        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+        <Search className={`absolute left-3 top-2.5 h-5 w-5 ${themeClasses.icon}`} />
         {searchTerm && (
           <button 
             onClick={handleClear}
             className="absolute right-3 top-2.5"
           >
-            <X className="h-5 w-5 text-gray-400 hover:text-white" />
+            <X className={`h-5 w-5 hover:text-red-500 ${themeClasses.icon}`} />
           </button>
         )}
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute z-50 w-full mt-1 max-h-60 overflow-auto bg-gray-700 border border-gray-600 rounded shadow-lg">
+        <ul className={`absolute z-50 w-full mt-1 max-h-60 overflow-auto border rounded shadow-lg ${themeClasses.dropdown}`}>
           {suggestions.map((model, index) => (
             <li
               key={index}
               onClick={() => handleSelect(model)}
-              className="px-4 py-2 hover:bg-gray-600 cursor-pointer text-white border-b border-gray-600 last:border-b-0"
+              className={`px-4 py-2 cursor-pointer border-b last:border-b-0 ${themeClasses.item}`}
             >
               {model}
             </li>
