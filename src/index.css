@@ -24,6 +24,7 @@ body {
   line-height: 1.5;
   font-weight: 400;
   overflow-x: hidden;
+  @apply bg-gray-900 text-white;
 }
 
 #root {
@@ -33,6 +34,7 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
+  @apply w-screen h-screen m-0 p-0 overflow-hidden;
 }
 
 /* Arreglo para el calendario en modo light */
@@ -119,4 +121,20 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+.pivot-table-container {
+  @apply w-full h-full overflow-auto;
+}
+
+.pivot-header {
+  @apply sticky top-0 bg-gray-800 z-10;
+}
+
+.pivot-row {
+  @apply hover:bg-gray-700 transition-colors;
+}
+
+.pivot-cell {
+  @apply px-4 py-2 border-b border-gray-700;
 }
