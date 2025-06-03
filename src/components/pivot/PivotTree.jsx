@@ -38,16 +38,21 @@ const PivotTree = () => {
   const { pivotTree = [], expandedNodes = {}, toggleNode = () => {} } = useAppContext() || {};
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-2 sm:p-4 mb-6">
-      {pivotTree.length > 0 ? (
-        pivotTree.map(node => (
-          <PivotNode key={node.id} node={node} expandedNodes={expandedNodes} toggleNode={toggleNode} />
-        ))
-      ) : (
-        <p className="text-center text-gray-500 dark:text-gray-400 py-10">
-          No hay datos para mostrar con los filtros actuales o no hay datos cargados.
-        </p>
-      )}
+    <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-2 sm:p-4 flex-1 flex flex-col overflow-hidden">
+      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4 flex-shrink-0">
+        Árbol de Datos DPHU
+      </h3>
+      <div className="flex-1 overflow-auto">
+        {pivotTree.length > 0 ? (
+          pivotTree.map(node => (
+            <PivotNode key={node.id} node={node} expandedNodes={expandedNodes} toggleNode={toggleNode} />
+          ))
+        ) : (
+          <p className="text-center text-gray-500 dark:text-gray-400 py-10">
+            No hay datos para mostrar con los filtros actuales o no hay datos cargados.
+          </p>
+        )}
+      </div>
     </div>
   );
 };

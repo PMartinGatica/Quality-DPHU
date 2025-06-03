@@ -9,12 +9,20 @@ function App() {
   return (
     <AppProvider>
       <Layout>
-        <FilterSection />
-        <PivotTree />
-        <DPHUChart 
-          chartData={[]} // Los datos vendrán del contexto
-          chartTitle="Análisis de Errores"
-        />
+        <div className="flex flex-col gap-6 h-full">
+          <FilterSection />
+          <div className="flex-1 flex flex-col gap-6 min-h-0">
+            <div className="flex-1 min-h-0">
+              <PivotTree />
+            </div>
+            <div className="flex-1 min-h-0">
+              <DPHUChart 
+                chartData={[]} 
+                chartTitle="Análisis de Errores"
+              />
+            </div>
+          </div>
+        </div>
       </Layout>
     </AppProvider>
   );
