@@ -13,7 +13,7 @@ const Header = ({ theme, toggleTheme }) => {
   return (
     <header className="mb-6 flex justify-between items-center">
       <div className="flex items-center space-x-4">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">DPHU</h1>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Quality Control - DPHU</h1>
         <div className={`p-2 rounded-lg shadow text-xl font-semibold ${
           dphuPercentage < dphuThreshold 
             ? 'bg-red-100 dark:bg-red-800 text-red-700 dark:text-red-200' 
