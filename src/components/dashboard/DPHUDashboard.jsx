@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGoogleSheetsAPI } from '../../hooks/useGoogleSheetsAPI';
 import LoadingSpinner from '../common/LoadingSpinner';
-import ModelSearch from '../common/ModelSearch';
+import MultiModelSearch from '../common/MultiModelSearch';
 import PivotTreeView from '../pivot/PivotTreeView';
 import { RefreshCw, Filter as FilterIcon, X, Calendar, ChevronDown, Database, Clock } from 'lucide-react';
 
@@ -25,7 +25,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
   const [filters, setFilters] = useState({
     fecha_desde: '',
     fecha_hasta: '',
-    modelo: 'Todos los Modelos',
+    modelos: [], // Cambiado a array para múltiples modelos
   });
 
   // Obtener fechas sugeridas (solo hoy y ayer)
@@ -64,7 +64,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     setFilters({
       fecha_desde: '',
       fecha_hasta: '',
-      modelo: 'Todos los Modelos',
+      modelos: [],
     });
   };
 
@@ -97,7 +97,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
     button: {
       primary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
       secondary: isDarkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-400 hover:bg-gray-500',
-      success: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600',
       warning: isDarkMode ? 'bg-orange-600 hover:bg-orange-700' : 'bg-orange-500 hover:bg-orange-600'
     },
     text: {
@@ -112,7 +111,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     return (
       <LoadingSpinner 
         progress={75}
-        message="Cargando los últimos registros..."
+        message="Cargando datos..."
         isDarkMode={isDarkMode}
       />
     );
@@ -231,11 +230,11 @@ const DPHUDashboard = ({ isDarkMode }) => {
           
           <div>
             <label className={`block text-sm font-medium mb-1 ${themeClasses.text.secondary}`}>
-              Modelo:
+              Modelos:
             </label>
-            <ModelSearch 
-              value={filters.modelo}
-              onChange={(value) => handleFilterChange('modelo', value)}
+            <MultiModelSearch 
+              selectedModels={filters.modelos}
+              onChange={(models) => handleFilterChange('modelos', models)}
               data={allData}
               isDarkMode={isDarkMode}
             />
@@ -246,6 +245,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
               onClick={() => applyFilters(filters)}
               className={`px-4 py-2 text-white rounded flex items-center ${themeClasses.button.primary}`}
             >
+              <FilterIcon className="h-4 w-4 mr-1" />
               Aplicar
             </button>
             <button

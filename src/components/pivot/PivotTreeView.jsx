@@ -6,7 +6,6 @@ const PivotTreeView = ({ data, isDarkMode = true }) => {
 
   const themeClasses = {
     container: isDarkMode ? 'bg-gray-800' : 'bg-white',
-    header: isDarkMode ? 'border-gray-700' : 'border-gray-200',
     text: {
       primary: isDarkMode ? 'text-white' : 'text-gray-900',
       secondary: isDarkMode ? 'text-gray-400' : 'text-gray-500',
@@ -144,13 +143,6 @@ const PivotTreeView = ({ data, isDarkMode = true }) => {
 
   return (
     <div className={`h-full flex flex-col ${themeClasses.container}`}>
-      {/* Header simplificado sin título */}
-      <div className={`p-4 border-b flex-shrink-0 ${themeClasses.header}`}>
-        <p className={`text-sm ${themeClasses.text.secondary}`}>
-          Haga clic en los elementos para expandir/contraer
-        </p>
-      </div>
-      
       <div className="flex-grow overflow-auto p-2">
         {Object.entries(hierarchyData)
           .sort(([,a], [,b]) => b.count - a.count)

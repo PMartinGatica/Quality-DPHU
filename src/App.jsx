@@ -35,9 +35,9 @@ function App() {
           <h1 className="text-2xl font-bold">DPHU</h1>
           
           <div className="flex items-center space-x-4">
-            <div className="text-sm bg-green-600 px-3 py-1 rounded font-semibold text-white">
+            {/* <div className="text-sm bg-green-600 px-3 py-1 rounded font-semibold text-white">
               36.36% DPHU (Provisional)
-            </div>
+            </div> */}
             
             {/* Toggle de tema */}
             <button
