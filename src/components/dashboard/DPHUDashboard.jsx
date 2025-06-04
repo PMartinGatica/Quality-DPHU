@@ -3,7 +3,7 @@ import { useGoogleSheetsAPI } from '../../hooks/useGoogleSheetsAPI';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ModelSearch from '../common/ModelSearch';
 import PivotTreeView from '../pivot/PivotTreeView';
-import { Download, RefreshCw, Filter as FilterIcon, X, Calendar, ChevronDown, Database, Clock } from 'lucide-react';
+import { RefreshCw, Filter as FilterIcon, X, Calendar, ChevronDown, Database, Clock } from 'lucide-react';
 
 const DPHUDashboard = ({ isDarkMode }) => {
   const { 
@@ -28,17 +28,14 @@ const DPHUDashboard = ({ isDarkMode }) => {
     modelo: 'Todos los Modelos',
   });
 
-  // Obtener fechas sugeridas
+  // Obtener fechas sugeridas (solo hoy y ayer)
   const getSuggestedDates = () => {
     const today = new Date();
     const formatDate = (date) => date.toISOString().split('T')[0];
     
     return {
       today: formatDate(today),
-      yesterday: formatDate(new Date(today.getTime() - 24 * 60 * 60 * 1000)),
-      lastWeek: formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)),
-      lastMonth: formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)),
-      last3Months: formatDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000))
+      yesterday: formatDate(new Date(today.getTime() - 24 * 60 * 60 * 1000))
     };
   };
 
@@ -87,53 +84,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
           fecha_hasta: suggestedDates.yesterday
         }));
         break;
-      case 'lastWeek':
-        setFilters(prev => ({
-          ...prev,
-          fecha_desde: suggestedDates.lastWeek,
-          fecha_hasta: suggestedDates.today
-        }));
-        break;
-      case 'lastMonth':
-        setFilters(prev => ({
-          ...prev,
-          fecha_desde: suggestedDates.lastMonth,
-          fecha_hasta: suggestedDates.today
-        }));
-        break;
-      case 'last3Months':
-        setFilters(prev => ({
-          ...prev,
-          fecha_desde: suggestedDates.last3Months,
-          fecha_hasta: suggestedDates.today
-        }));
-        break;
     }
-  };
-
-  const exportToCSV = () => {
-    const headers = [
-      'MODELO', 'NS', 'FUNCION', 'CODIGO_DE_FALLA_REPARACION',
-      'CAUSA_DE_REPARACION', 'ACCION_CORRECTIVA', 'ORIGEN',
-      'POSICION', 'COMENTARIO', 'FECHA_REPARACION'
-    ];
-    
-    const csvRows = [
-      headers.join(','),
-      ...filteredData.map(item => 
-        headers.map(header => `"${item[header] || ''}"`).join(',')
-      )
-    ];
-    
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `dphu_data_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   // Clases dinámicas basadas en el tema
@@ -161,7 +112,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     return (
       <LoadingSpinner 
         progress={75}
-        message="Cargando los últimos 5000 registros..."
+        message="Cargando los últimos registros..."
         isDarkMode={isDarkMode}
       />
     );
@@ -195,33 +146,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
             <FilterIcon className="h-5 w-5 text-blue-400" />
             <h2 className={`text-lg font-semibold ${themeClasses.text.primary}`}>Filtros</h2>
           </div>
-          
-          <div className="flex items-center space-x-6 text-sm">
-            <div className="text-center">
-              <div className="text-lg font-bold text-blue-400">
-                {allData.length.toLocaleString()}
-              </div>
-              <div className={themeClasses.text.muted}>Cargados</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-400">
-                {filteredData.length.toLocaleString()}
-              </div>
-              <div className={themeClasses.text.muted}>Filtrados</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-purple-400">
-                {getUniqueModels().length}
-              </div>
-              <div className={themeClasses.text.muted}>Modelos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-orange-400">
-                {totalAvailable.toLocaleString()}
-              </div>
-              <div className={themeClasses.text.muted}>Total BD</div>
-            </div>
-          </div>
         </div>
 
         {/* Información de rango de fechas cargadas */}
@@ -249,7 +173,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   ) : (
                     <>
                       <ChevronDown className="h-3 w-3 mr-1" />
-                      Cargar 5000 más
+                      Cargar más datos
                     </>
                   )}
                 </button>
@@ -258,7 +182,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
           </div>
         )}
 
-        {/* Botones de rango rápido */}
+        {/* Botones de rango rápido (solo hoy y ayer) */}
         <div className="mb-4">
           <label className={`block text-sm font-medium mb-2 ${themeClasses.text.secondary}`}>
             <Calendar className="inline h-4 w-4 mr-1" />
@@ -276,24 +200,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
               className={`px-3 py-1 text-xs rounded text-white ${themeClasses.button.secondary}`}
             >
               Ayer
-            </button>
-            <button
-              onClick={() => setQuickDateRange('lastWeek')}
-              className={`px-3 py-1 text-xs rounded text-white ${themeClasses.button.secondary}`}
-            >
-              Última semana
-            </button>
-            <button
-              onClick={() => setQuickDateRange('lastMonth')}
-              className={`px-3 py-1 text-xs rounded text-white ${themeClasses.button.secondary}`}
-            >
-              Último mes
-            </button>
-            <button
-              onClick={() => setQuickDateRange('last3Months')}
-              className={`px-3 py-1 text-xs rounded text-white ${themeClasses.button.secondary}`}
-            >
-              Últimos 3 meses
             </button>
           </div>
         </div>
@@ -358,12 +264,12 @@ const DPHUDashboard = ({ isDarkMode }) => {
         <PivotTreeView data={filteredData} isDarkMode={isDarkMode} />
       </div>
 
-      {/* Footer */}
+      {/* Footer simplificado */}
       <div className={`border-t p-4 flex-shrink-0 ${themeClasses.card}`}>
         <div className="flex justify-between items-center">
           <div className={`text-sm ${themeClasses.text.muted}`}>
-            {filteredData.length} registros mostrados de {allData.length} cargados 
-            {hasMoreData && ` (${totalAvailable - allData.length} más disponibles)`}
+            {filteredData.length} registros mostrados
+            {hasMoreData && ` (más datos disponibles)`}
           </div>
           
           <div className="flex items-center space-x-2">
@@ -386,15 +292,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
                 )}
               </button>
             )}
-            
-            <button 
-              onClick={exportToCSV}
-              disabled={filteredData.length === 0}
-              className={`px-4 py-2 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${themeClasses.button.success}`}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Exportar CSV
-            </button>
           </div>
         </div>
       </div>

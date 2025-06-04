@@ -144,12 +144,10 @@ const PivotTreeView = ({ data, isDarkMode = true }) => {
 
   return (
     <div className={`h-full flex flex-col ${themeClasses.container}`}>
+      {/* Header simplificado sin título */}
       <div className={`p-4 border-b flex-shrink-0 ${themeClasses.header}`}>
-        <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>
-          Vista Jerárquica DPHU
-        </h3>
         <p className={`text-sm ${themeClasses.text.secondary}`}>
-          Haga clic en los elementos para expandir/contraer. Total: {data.length} registros
+          Haga clic en los elementos para expandir/contraer
         </p>
       </div>
       
