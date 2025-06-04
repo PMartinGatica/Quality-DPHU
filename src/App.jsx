@@ -32,7 +32,7 @@ function App() {
         isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
       }`}>
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">DPHU</h1>
+          <h1 className="text-2xl font-bold">Quality Control - DPHU</h1>
           
           <div className="flex items-center space-x-4">
             {/* <div className="text-sm bg-green-600 px-3 py-1 rounded font-semibold text-white">
