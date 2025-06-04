@@ -324,11 +324,11 @@ const DPHUDashboard = ({ isDarkMode }) => {
 
   return (
     <div className={`h-full flex flex-col ${themeClasses.background}`}>
-      {/* Panel de filtros contraíble MANUAL */}
-      <div className={`transition-all duration-500 ease-in-out ${
+      {/* Panel de filtros contraíble MANUAL - Z-INDEX MUY ALTO */}
+      <div className={`relative z-50 transition-all duration-500 ease-in-out ${
         isFiltersCollapsed ? 'max-h-20' : 'max-h-none'
-      } overflow-hidden`}>
-        <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+      } overflow-visible shadow-xl bg-white dark:bg-gray-800`}>
+        <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
           {/* Header del panel de filtros */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
@@ -366,7 +366,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
             {/* Botón para contraer/expandir MANUAL */}
             <button
               onClick={() => setIsFiltersCollapsed(!isFiltersCollapsed)}
-              className={`p-2 rounded-lg transition-colors ${themeClasses.button.secondary}`}
+              className={`p-2 rounded-lg transition-colors ${themeClasses.button.secondary} hover:scale-105`}
               title={isFiltersCollapsed ? 'Expandir filtros' : 'Contraer filtros'}
             >
               {isFiltersCollapsed ? (
@@ -419,8 +419,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   <input
                     type="date"
                     value={filters.fecha_desde}
-                    onChange={(e) => setFilters(prev => ({ ...prev, fecha_desde: e.target.value }))
-                    }
+                    onChange={(e) => setFilters(prev => ({ ...prev, fecha_desde: e.target.value }))}
                     className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
@@ -433,14 +432,13 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   <input
                     type="date"
                     value={filters.fecha_hasta}
-                    onChange={(e) => setFilters(prev => ({ ...prev, fecha_hasta: e.target.value }))
-                    }
+                    onChange={(e) => setFilters(prev => ({ ...prev, fecha_hasta: e.target.value }))}
                     className={`w-full p-2 border rounded-lg ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                   />
                 </div>
 
-                {/* MODELOS MOVIDO AQUÍ - AL LADO DE FECHA HASTA */}
-                <div>
+                {/* MODELOS */}
+                <div className="relative">
                   <label className={`block text-sm font-medium mb-2 ${themeClasses.text.secondary}`}>
                     🏭 Modelos ({filters.modelos.length})
                   </label>
@@ -467,13 +465,16 @@ const DPHUDashboard = ({ isDarkMode }) => {
                       </button>
                     </div>
 
-                    {/* Dropdown de modelos */}
+                    {/* Dropdown de modelos - Z-INDEX MUY ALTO */}
                     {isModelDropdownOpen && (
-                      <div className={`absolute z-50 w-full mt-1 ${themeClasses.card} border rounded-lg shadow-lg max-h-64 overflow-y-auto`}>
-                        {/* BOTONES ELIMINADOS - Solo botón Limpiar */}
+                      <div className={`absolute z-[100] w-full mt-1 ${themeClasses.card} border rounded-lg shadow-2xl max-h-64 overflow-y-auto`}>
+                        {/* Solo botón Limpiar */}
                         <div className="p-2 border-b flex justify-end">
                           <button
-                            onClick={clearAllModels}
+                            onClick={() => {
+                              clearAllModels();
+                              setIsModelDropdownOpen(false);
+                            }}
                             className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
                           >
                             🗑️ Limpiar
@@ -495,7 +496,10 @@ const DPHUDashboard = ({ isDarkMode }) => {
                         {filteredModels.map(model => (
                           <button
                             key={model}
-                            onClick={() => toggleModel(model)}
+                            onClick={() => {
+                              toggleModel(model);
+                              // No cerrar el dropdown automáticamente para permitir múltiples selecciones
+                            }}
                             className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
                               filters.modelos.includes(model) ? 'bg-purple-100 dark:bg-purple-800' : ''
                             }`}
@@ -510,7 +514,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
                     )}
                   </div>
 
-                  {/* Mostrar modelos seleccionados - MÁS COMPACTO */}
+                  {/* Mostrar modelos seleccionados */}
                   {filters.modelos.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {filters.modelos.slice(0, 2).map(model => (
@@ -537,81 +541,65 @@ const DPHUDashboard = ({ isDarkMode }) => {
                 </div>
               </div>
 
-              {/* Filtro de turnos */}
-              <div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+              {/* Filtro de turnos - COMPACTO Y VISIBLE */}
+              <div className="relative z-40 mt-4 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
                 <div className="flex items-center space-x-2 mb-3">
-                  <Clock className="h-5 w-5 text-amber-600" />
-                  <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
                     Filtro por Turno
                   </h3>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {/* Todos los turnos */}
-                  <button
-                    onClick={() => setFilters(prev => ({ ...prev, turno: 'Todos' }))}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      filters.turno === 'Todos'
-                        ? 'border-amber-500 bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-200'
-                        : 'border-gray-300 dark:border-gray-600 hover:border-amber-400'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-sm font-semibold">Todos</div>
-                      <div className="text-xs text-gray-500">
-                        {showResults ? finalFilteredData.length : 0} registros
-                      </div>
-                    </div>
-                  </button>
-
+                {/* Grid de turnos - MÁS ESPACIADO */}
+                <div className="grid grid-cols-3 gap-3">
                   {/* Turno Mañana */}
                   <button
                     onClick={() => setFilters(prev => ({ ...prev, turno: 'TM' }))}
-                    className={`p-3 rounded-lg border-2 transition-all ${
+                    className={`p-3 rounded-lg border-2 transition-all text-xs ${
                       filters.turno === 'TM'
                         ? 'border-yellow-500 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
                         : 'border-gray-300 dark:border-gray-600 hover:border-yellow-400'
                     }`}
                   >
                     <div className="text-center">
-                      <Sun className="h-5 w-5 mx-auto mb-1 text-yellow-500" />
-                      <div className="text-sm font-semibold">TM</div>
-                      <div className="text-xs text-gray-500">06:00 - 15:00</div>
-                      <div className="text-xs font-medium">{showResults ? turnoStats.TM : 0} registros</div>
+                      <Sun className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
+                      <div className="text-xs font-semibold">TM</div>
+                      <div className="text-xs text-gray-500">06-15h</div>
+                      <div className="text-xs font-medium">{showResults ? turnoStats.TM : 0}</div>
                     </div>
                   </button>
 
                   {/* Turno Tarde */}
                   <button
                     onClick={() => setFilters(prev => ({ ...prev, turno: 'TT' }))}
-                    className={`p-3 rounded-lg border-2 transition-all ${
+                    className={`p-3 rounded-lg border-2 transition-all text-xs ${
                       filters.turno === 'TT'
                         ? 'border-orange-500 bg-orange-100 dark:bg-orange-800 text-orange-800 dark:text-orange-200'
                         : 'border-gray-300 dark:border-gray-600 hover:border-orange-400'
                     }`}
                   >
                     <div className="text-center">
-                      <Sunset className="h-5 w-5 mx-auto mb-1 text-orange-500" />
-                      <div className="text-sm font-semibold">TT</div>
-                      <div className="text-xs text-gray-500">15:00 - 23:59</div>
-                      <div className="text-xs font-medium">{showResults ? turnoStats.TT : 0} registros</div>
+                      <Sunset className="h-4 w-4 mx-auto mb-1 text-orange-500" />
+                      <div className="text-xs font-semibold">TT</div>
+                      <div className="text-xs text-gray-500">15-23h</div>
+                      <div className="text-xs font-medium">{showResults ? turnoStats.TT : 0}</div>
                     </div>
                   </button>
 
                   {/* Turno Noche */}
                   <button
                     onClick={() => setFilters(prev => ({ ...prev, turno: 'TN' }))}
-                    className={`p-3 rounded-lg border-2 transition-all ${
+                    className={`p-3 rounded-lg border-2 transition-all text-xs ${
                       filters.turno === 'TN'
                         ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200'
                         : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
                     }`}
                   >
                     <div className="text-center">
-                      <MoonIcon className="h-5 w-5 mx-auto mb-1 text-indigo-500" />
-                      <div className="text-sm font-semibold">TN</div>
-                      <div className="text-xs text-gray-500">00:00 - 05:59</div>
-                      <div className="text-xs font-medium">{showResults ? turnoStats.TN : 0} registros</div>
+                      <MoonIcon className="h-4 w-4 mx-auto mb-1 text-indigo-500" />
+                      <div className="text-xs font-semibold">TN</div>
+                      <div className="text-xs text-gray-500">00-05h</div>
+                      <div className="text-xs font-medium">{showResults ? turnoStats.TN : 0}</div>
                     </div>
                   </button>
                 </div>
@@ -624,7 +612,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4 text-blue-400" />
                       <span className={`text-sm ${themeClasses.text.secondary}`}>
-                        Datos cargados: <strong>{oldestLoadedDate}</strong> hasta <strong>{newestLoadedDate}</strong>
+                        Datos: <strong>{oldestLoadedDate}</strong> - <strong>{newestLoadedDate}</strong>
                       </span>
                     </div>
                     {hasMoreData && (
@@ -633,7 +621,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
                         disabled={loadingMore}
                         className={`text-sm px-3 py-1 rounded ${themeClasses.button.primary} text-white`}
                       >
-                        {loadingMore ? 'Cargando...' : 'Cargar más históricos'}
+                        {loadingMore ? 'Cargando...' : 'Cargar más'}
                       </button>
                     )}
                   </div>
@@ -644,9 +632,9 @@ const DPHUDashboard = ({ isDarkMode }) => {
         </div>
       </div>
 
-      {/* Navegación de vistas - Solo se muestra cuando hay resultados */}
+      {/* Navegación de vistas */}
       {showResults && (
-        <div className={`flex space-x-1 p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`relative z-30 flex space-x-1 p-4 border-b ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'} shadow-sm`}>
           {[
             {
               id: 'table',
@@ -674,8 +662,8 @@ const DPHUDashboard = ({ isDarkMode }) => {
         </div>
       )}
 
-      {/* Contenido principal */}
-      <div className="flex-grow overflow-hidden">
+      {/* Contenido principal - Z-INDEX BAJO */}
+      <div className={`relative z-0 flex-grow overflow-hidden`}>
         {error ? (
           <ErrorMessage message={error} />
         ) : !showResults ? (
@@ -694,6 +682,14 @@ const DPHUDashboard = ({ isDarkMode }) => {
           </>
         )}
       </div>
+
+      {/* Cerrar dropdown al hacer click fuera */}
+      {isModelDropdownOpen && (
+        <div 
+          className="fixed inset-0 z-[90]" 
+          onClick={() => setIsModelDropdownOpen(false)}
+        />
+      )}
     </div>
   );
 };

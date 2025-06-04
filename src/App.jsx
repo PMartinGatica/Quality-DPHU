@@ -3,7 +3,11 @@ import DPHUDashboard from './components/dashboard/DPHUDashboard';
 import { Sun, Moon } from 'lucide-react';
 
 function App() {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  // Cambiar de dark mode por defecto a light mode
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false; // false = light mode por defecto
+  });
 
   // Cargar tema desde localStorage al iniciar
   useEffect(() => {
