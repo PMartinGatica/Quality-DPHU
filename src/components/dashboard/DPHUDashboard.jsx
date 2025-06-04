@@ -34,6 +34,10 @@ const DPHUDashboard = ({ isDarkMode }) => {
   const [modelSearchTerm, setModelSearchTerm] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
 
+  // Nuevos estados para el modal de selección de modelos
+  const [isModelModalOpen, setIsModelModalOpen] = useState(false);
+  const [modelModalSearch, setModelModalSearch] = useState('');
+
   const { 
     allData, 
     filteredData, 
@@ -59,7 +63,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     
     if (horaNum >= 6 && horaNum < 15) return 'TM'; // 06:00:00 - 14:59:59
     if (horaNum >= 15 && horaNum <= 23) return 'TT'; // 15:00:00 - 23:59:59
-    if (horaNum >= 0 && horaNum < 6) return 'TN'; // 00:00:00 - 05:59:59
+    if (horaNum >= 0 && horaNum < 6) return 'TN' ; // 00:00:00 - 05:59:59
     
     return null;
   }, []);
@@ -179,7 +183,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     setFilters(prev => ({ ...prev, modelos: [] }));
   };
 
-  // Filtrar modelos basado en búsqueda inteligente
+  // Filtrar modelos basado en búsqueda inteligente - CORREGIDO
   const filteredModels = useMemo(() => {
     if (!modelSearchTerm || modelSearchTerm.length < 3) {
       return uniqueModels;
@@ -190,6 +194,15 @@ const DPHUDashboard = ({ isDarkMode }) => {
       model.toLowerCase().includes(searchLower)
     );
   }, [uniqueModels, modelSearchTerm]);
+
+  // Filtrado para el modal (si no ingresas nada muestra todos)
+  const filteredModalModels = useMemo(() => {
+    if (!modelModalSearch) return uniqueModels;
+    const searchLower = modelModalSearch.toLowerCase();
+    return uniqueModels.filter(model =>
+      model.toLowerCase().includes(searchLower)
+    );
+  }, [uniqueModels, modelModalSearch]);
 
   // Componente de Carga Inicial con GIF
   const InitialLoadingScreen = () => (
@@ -437,107 +450,37 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   />
                 </div>
 
-                {/* MODELOS */}
-                <div className="relative">
-                  <label className={`block text-sm font-medium mb-2 ${themeClasses.text.secondary}`}>
+                {/* MODELOS - NUEVO INPUT CON CHECKBOXES */}
+                <div className="space-y-2">
+                  <label className={`block text-sm font-medium ${themeClasses.text.secondary}`}>
                     🏭 Modelos ({filters.modelos.length})
                   </label>
-                  
-                  {/* Input de búsqueda con dropdown */}
-                  <div className="relative">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Buscar modelo..."
-                        value={modelSearchTerm}
-                        onChange={(e) => setModelSearchTerm(e.target.value)}
-                        onFocus={() => setIsModelDropdownOpen(true)}
-                        className={`w-full pl-10 pr-8 py-2 border rounded-lg text-sm ${
-                          isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 placeholder-gray-500'
-                        }`}
-                      />
-                      <button
-                        onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                      >
-                        <ChevronDown className={`h-4 w-4 transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>
-
-                    {/* Dropdown de modelos - Z-INDEX MUY ALTO */}
-                    {isModelDropdownOpen && (
-                      <div className={`absolute z-[100] w-full mt-1 ${themeClasses.card} border rounded-lg shadow-2xl max-h-64 overflow-y-auto`}>
-                        {/* Solo botón Limpiar */}
-                        <div className="p-2 border-b flex justify-end">
-                          <button
-                            onClick={() => {
-                              clearAllModels();
-                              setIsModelDropdownOpen(false);
-                            }}
-                            className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
-                          >
-                            🗑️ Limpiar
-                          </button>
-                        </div>
-
-                        {modelSearchTerm.length > 0 && modelSearchTerm.length < 3 && (
-                          <div className="p-3 text-sm text-gray-500">
-                            Escribe al menos 3 caracteres para buscar...
-                          </div>
-                        )}
-                        
-                        {filteredModels.length === 0 && modelSearchTerm.length >= 3 && (
-                          <div className="p-3 text-sm text-gray-500">
-                            No se encontraron modelos con "{modelSearchTerm}"
-                          </div>
-                        )}
-                        
-                        {filteredModels.map(model => (
-                          <button
-                            key={model}
-                            onClick={() => {
-                              toggleModel(model);
-                              // No cerrar el dropdown automáticamente para permitir múltiples selecciones
-                            }}
-                            className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
-                              filters.modelos.includes(model) ? 'bg-purple-100 dark:bg-purple-800' : ''
-                            }`}
-                          >
-                            <span>{model}</span>
-                            {filters.modelos.includes(model) && (
-                              <Check className="h-4 w-4 text-purple-600" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <input
+                    type="text"
+                    placeholder="Buscar modelo..."
+                    value={modelSearchTerm}
+                    onChange={(e) => setModelSearchTerm(e.target.value)}
+                    className="w-full pl-3 pr-3 py-2 border-2 border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:bg-white focus:outline-none"
+                  />
+                  <div className="max-h-60 overflow-y-auto border rounded-lg mt-2">
+                    {(modelSearchTerm 
+                      ? uniqueModels.filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase()))
+                      : uniqueModels
+                    ).map(model => {
+                      const isSelected = filters.modelos.includes(model);
+                      return (
+                        <label key={model} className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleModel(model)}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">{model}</span>
+                        </label>
+                      );
+                    })}
                   </div>
-
-                  {/* Mostrar modelos seleccionados */}
-                  {filters.modelos.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {filters.modelos.slice(0, 2).map(model => (
-                        <span
-                          key={model}
-                          className="inline-flex items-center px-1 py-0.5 text-xs bg-purple-200 dark:bg-purple-700 text-purple-800 dark:text-purple-200 rounded"
-                        >
-                          {model.substring(0, 8)}...
-                          <button
-                            onClick={() => toggleModel(model)}
-                            className="ml-1 hover:text-purple-600"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </span>
-                      ))}
-                      {filters.modelos.length > 2 && (
-                        <span className="text-xs text-purple-600 dark:text-purple-400">
-                          +{filters.modelos.length - 2} más
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -689,6 +632,68 @@ const DPHUDashboard = ({ isDarkMode }) => {
           className="fixed inset-0 z-[90]" 
           onClick={() => setIsModelDropdownOpen(false)}
         />
+      )}
+
+      {/* Modal para selección de modelos */}
+      {isModelModalOpen && (
+        <div 
+          className="fixed inset-0 z-[150] flex items-center justify-center bg-black bg-opacity-40"
+          onClick={() => setIsModelModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl w-96 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Seleccionar modelos</h3>
+              <button 
+                onClick={() => setIsModelModalOpen(false)} 
+                className="text-gray-600 hover:text-gray-800 focus:outline-none"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <input 
+              type="text"
+              placeholder="Buscar modelo..."
+              value={modelModalSearch}
+              onChange={(e) => setModelModalSearch(e.target.value)}
+              className="w-full mb-3 p-2 border rounded-lg text-sm bg-gray-50 text-gray-900"
+            />
+            <div className="max-h-60 overflow-y-auto border-t border-b border-gray-200">
+              {filteredModalModels.map(model => {
+                const isSelected = filters.modelos.includes(model);
+                return (
+                  <label 
+                    key={model} 
+                    className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    <input 
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleModel(model)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-800">{model}</span>
+                  </label>
+                );
+              })}
+              {filteredModalModels.length === 0 && (
+                <div className="p-3 text-center text-gray-500 text-sm">
+                  No se encontraron modelos.
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setIsModelModalOpen(false)}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
