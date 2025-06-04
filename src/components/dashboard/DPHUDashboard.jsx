@@ -3,16 +3,21 @@ import { useGoogleSheetsAPI } from '../../hooks/useGoogleSheetsAPI';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ModelSearch from '../common/ModelSearch';
 import PivotTreeView from '../pivot/PivotTreeView';
-import { Download, RefreshCw, Filter as FilterIcon, X, Calendar } from 'lucide-react';
+import { Download, RefreshCw, Filter as FilterIcon, X, Calendar, ChevronDown, Database, Clock } from 'lucide-react';
 
 const DPHUDashboard = ({ isDarkMode }) => {
   const { 
     allData, 
     filteredData, 
     loading, 
+    loadingMore,
     error, 
-    loadingProgress,
-    fetchAllData, 
+    hasMoreData,
+    totalAvailable,
+    oldestLoadedDate,
+    newestLoadedDate,
+    fetchLatestData, 
+    loadMoreHistoricalData,
     applyFilters, 
     getUniqueModels 
   } = useGoogleSheetsAPI();
@@ -23,7 +28,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     modelo: 'Todos los Modelos',
   });
 
-  // Obtener fechas sugeridas (últimos 30 días, últimos 7 días, etc.)
+  // Obtener fechas sugeridas
   const getSuggestedDates = () => {
     const today = new Date();
     const formatDate = (date) => date.toISOString().split('T')[0];
@@ -41,8 +46,8 @@ const DPHUDashboard = ({ isDarkMode }) => {
 
   // Cargar datos al montar el componente
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+    fetchLatestData();
+  }, [fetchLatestData]);
 
   // Aplicar filtros cuando cambien
   useEffect(() => {
@@ -141,7 +146,8 @@ const DPHUDashboard = ({ isDarkMode }) => {
     button: {
       primary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
       secondary: isDarkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-gray-400 hover:bg-gray-500',
-      success: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600'
+      success: isDarkMode ? 'bg-green-600 hover:bg-green-700' : 'bg-green-500 hover:bg-green-600',
+      warning: isDarkMode ? 'bg-orange-600 hover:bg-orange-700' : 'bg-orange-500 hover:bg-orange-600'
     },
     text: {
       primary: isDarkMode ? 'text-white' : 'text-gray-900',
@@ -150,12 +156,12 @@ const DPHUDashboard = ({ isDarkMode }) => {
     }
   };
 
-  // Mostrar loading hasta que termine de cargar
+  // Mostrar loading inicial
   if (loading) {
     return (
       <LoadingSpinner 
-        progress={loadingProgress}
-        message={`Cargando datos desde Google Sheets...`}
+        progress={75}
+        message="Cargando los últimos 5000 registros..."
         isDarkMode={isDarkMode}
       />
     );
@@ -169,7 +175,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
           <div className="text-red-500 text-2xl mb-4">❌ Error de conexión</div>
           <div className={`mb-6 ${themeClasses.text.secondary}`}>{error}</div>
           <button 
-            onClick={fetchAllData}
+            onClick={fetchLatestData}
             className={`px-6 py-3 text-white rounded flex items-center mx-auto ${themeClasses.button.primary}`}
           >
             <RefreshCw className="mr-2 h-5 w-5" />
@@ -180,7 +186,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
     );
   }
 
-  // Dashboard principal
   return (
     <div className={`w-full h-full flex flex-col overflow-hidden ${themeClasses.container}`}>
       {/* Filtros */}
@@ -196,7 +201,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
               <div className="text-lg font-bold text-blue-400">
                 {allData.length.toLocaleString()}
               </div>
-              <div className={themeClasses.text.muted}>Total</div>
+              <div className={themeClasses.text.muted}>Cargados</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-green-400">
@@ -204,8 +209,54 @@ const DPHUDashboard = ({ isDarkMode }) => {
               </div>
               <div className={themeClasses.text.muted}>Filtrados</div>
             </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-purple-400">
+                {getUniqueModels().length}
+              </div>
+              <div className={themeClasses.text.muted}>Modelos</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-orange-400">
+                {totalAvailable.toLocaleString()}
+              </div>
+              <div className={themeClasses.text.muted}>Total BD</div>
+            </div>
           </div>
         </div>
+
+        {/* Información de rango de fechas cargadas */}
+        {oldestLoadedDate && newestLoadedDate && (
+          <div className={`mb-4 p-3 rounded ${isDarkMode ? 'bg-blue-900 bg-opacity-30' : 'bg-blue-100'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4 text-blue-400" />
+                <span className={`text-sm ${themeClasses.text.secondary}`}>
+                  Datos cargados desde: <strong>{oldestLoadedDate}</strong> hasta: <strong>{newestLoadedDate}</strong>
+                </span>
+              </div>
+              
+              {hasMoreData && (
+                <button
+                  onClick={loadMoreHistoricalData}
+                  disabled={loadingMore}
+                  className={`px-3 py-1 text-xs rounded text-white flex items-center ${themeClasses.button.warning} disabled:opacity-50`}
+                >
+                  {loadingMore ? (
+                    <>
+                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3 mr-1" />
+                      Cargar 5000 más
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Botones de rango rápido */}
         <div className="mb-4">
@@ -311,17 +362,40 @@ const DPHUDashboard = ({ isDarkMode }) => {
       <div className={`border-t p-4 flex-shrink-0 ${themeClasses.card}`}>
         <div className="flex justify-between items-center">
           <div className={`text-sm ${themeClasses.text.muted}`}>
-            Total de registros con NS válido después de filtros: {filteredData.length}
+            {filteredData.length} registros mostrados de {allData.length} cargados 
+            {hasMoreData && ` (${totalAvailable - allData.length} más disponibles)`}
           </div>
           
-          <button 
-            onClick={exportToCSV}
-            disabled={filteredData.length === 0}
-            className={`px-4 py-2 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${themeClasses.button.success}`}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Exportar CSV
-          </button>
+          <div className="flex items-center space-x-2">
+            {hasMoreData && (
+              <button
+                onClick={loadMoreHistoricalData}
+                disabled={loadingMore}
+                className={`px-4 py-2 text-white rounded disabled:opacity-50 flex items-center ${themeClasses.button.warning}`}
+              >
+                {loadingMore ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Cargando datos...
+                  </>
+                ) : (
+                  <>
+                    <Database className="mr-2 h-4 w-4" />
+                    Cargar más datos históricos
+                  </>
+                )}
+              </button>
+            )}
+            
+            <button 
+              onClick={exportToCSV}
+              disabled={filteredData.length === 0}
+              className={`px-4 py-2 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${themeClasses.button.success}`}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,110 +1,120 @@
 import { useState, useCallback } from 'react';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbzvVL_MzmX8NGdNOOiCPRYSs-RrG93_EPAPLbZY6MAmxPS3mb-mEqQT0tT2sAcRv5T4/exec';
+// ACTUALIZA ESTA URL con la nueva URL de tu implementación
+const API_URL = 'https://script.google.com/macros/s/AKfycbzIfpX-OlwsEdbh9_YdEkF8NLPzJlWdbPD5sDApUIsOCmYcsAliYClJZA8YmmSktEb6/exec';
 
 export const useGoogleSheetsAPI = () => {
   const [allData, setAllData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [hasMoreData, setHasMoreData] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalAvailable, setTotalAvailable] = useState(0);
 
-  // Cargar TODOS los datos una sola vez
-  const fetchAllData = useCallback(async () => {
+  const fetchLatestData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setLoadingProgress(0);
+    setAllData([]);
+    setFilteredData([]);
+    setCurrentPage(1);
     
     try {
-      console.log('🔄 Iniciando carga de datos desde Google Sheets...');
-      setLoadingProgress(10);
+      console.log('🔄 Cargando últimos 5000 registros...');
       
-      const response = await fetch(API_URL);
-      setLoadingProgress(30);
+      const url = `${API_URL}?page=1&limit=5000`;
+      console.log('🌍 URL:', url);
+      
+      const response = await fetch(url);
+      console.log('📊 Status:', response.status);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      console.log('📡 Respuesta recibida, procesando datos...');
-      setLoadingProgress(50);
-      
       const result = await response.json();
-      setLoadingProgress(70);
+      console.log('📦 Datos recibidos:', result);
       
       if (result.error) {
         throw new Error(result.error);
       }
-
-      console.log('📊 Datos brutos recibidos:', result.data?.length || 0, 'registros');
       
-      // Procesar y limpiar datos
-      const processedData = result.data
-        .filter(row => row.NS && row.NS.trim() !== '') // Filtrar NS vacíos
-        .map(row => ({
-          ...row,
-          MODELO: row.MODELO?.trim() || '',
-          NS: row.NS?.trim() || '',
-          POSICION: row.POSICION?.trim() || '',
-          FUNCION: row.FUNCION?.trim() || '',
-          CODIGO_DE_FALLA_REPARACION: row.CODIGO_DE_FALLA_REPARACION?.trim() || '',
-          CAUSA_DE_REPARACION: row.CAUSA_DE_REPARACION?.trim() || '',
-          ACCION_CORRECTIVA: row.ACCION_CORRECTIVA?.trim() || '',
-          ORIGEN: row.ORIGEN?.trim() || '',
-          REPARADOR: row.REPARADOR?.trim() || '',
-          COMENTARIO: row.COMENTARIO?.trim() || ''
-        }));
-      
-      setLoadingProgress(90);
-      console.log('✅ Datos procesados:', processedData.length, 'registros válidos');
+      const processedData = result.data || [];
       
       setAllData(processedData);
       setFilteredData(processedData);
-      setLoadingProgress(100);
+      setHasMoreData(result.hasMore || false);
+      setTotalAvailable(result.total || 0);
       
-      console.log('🎉 Carga completada exitosamente');
+      console.log(`✅ Cargados ${processedData.length} registros`);
       
     } catch (err) {
-      console.error('❌ Error cargando datos:', err);
+      console.error('❌ Error:', err);
       setError(err.message);
     } finally {
-      setTimeout(() => {
-        setLoading(false);
-        setLoadingProgress(0);
-      }, 500); // Pequeña pausa para mostrar 100%
+      setLoading(false);
     }
   }, []);
 
-  // Aplicar filtros localmente
+  const loadMoreHistoricalData = useCallback(async () => {
+    if (!hasMoreData || loadingMore) return;
+    
+    setLoadingMore(true);
+    
+    try {
+      console.log(`📊 Cargando página ${currentPage + 1}...`);
+      
+      const url = `${API_URL}?page=${currentPage + 1}&limit=5000`;
+      const response = await fetch(url);
+      const result = await response.json();
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      const newData = result.data || [];
+      const combinedData = [...allData, ...newData];
+      
+      setAllData(combinedData);
+      setFilteredData(combinedData);
+      setHasMoreData(result.hasMore || false);
+      setCurrentPage(prev => prev + 1);
+      
+      console.log(`✅ Cargados ${newData.length} registros adicionales. Total: ${combinedData.length}`);
+      
+    } catch (err) {
+      console.error('❌ Error cargando más datos:', err);
+      setError(err.message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMoreData, loadingMore, currentPage, allData]);
+
   const applyFilters = useCallback((filters) => {
     let filtered = [...allData];
     
-    // Filtro por fecha desde
     if (filters.fecha_desde) {
       filtered = filtered.filter(item => 
         item.FECHA_REPARACION >= filters.fecha_desde
       );
     }
     
-    // Filtro por fecha hasta
     if (filters.fecha_hasta) {
       filtered = filtered.filter(item => 
         item.FECHA_REPARACION <= filters.fecha_hasta
       );
     }
     
-    // Filtro por modelo
     if (filters.modelo && filters.modelo !== 'Todos los Modelos') {
       filtered = filtered.filter(item => 
         item.MODELO === filters.modelo
       );
     }
     
-    console.log('🔍 Filtros aplicados:', filters, '- Resultados:', filtered.length);
     setFilteredData(filtered);
   }, [allData]);
 
-  // Obtener modelos únicos
   const getUniqueModels = useCallback(() => {
     const models = [...new Set(allData.map(item => item.MODELO))].filter(Boolean);
     return models.sort();
@@ -114,9 +124,12 @@ export const useGoogleSheetsAPI = () => {
     allData,
     filteredData,
     loading,
+    loadingMore,
     error,
-    loadingProgress,
-    fetchAllData,
+    hasMoreData,
+    totalAvailable,
+    fetchLatestData,
+    loadMoreHistoricalData,
     applyFilters,
     getUniqueModels
   };
