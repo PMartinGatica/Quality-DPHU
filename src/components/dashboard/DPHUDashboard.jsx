@@ -450,37 +450,90 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   />
                 </div>
 
-                {/* MODELOS - NUEVO INPUT CON CHECKBOXES */}
+                {/* MODELOS - SECCIÓN FIJA CON BÚSQUEDA Y CHECKBOXES */}
                 <div className="space-y-2">
                   <label className={`block text-sm font-medium ${themeClasses.text.secondary}`}>
                     🏭 Modelos ({filters.modelos.length})
                   </label>
+                  
+                  {/* Input de búsqueda */}
                   <input
                     type="text"
-                    placeholder="Buscar modelo..."
+                    placeholder="Escribe para buscar modelos..."
                     value={modelSearchTerm}
                     onChange={(e) => setModelSearchTerm(e.target.value)}
-                    className="w-full pl-3 pr-3 py-2 border-2 border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:bg-white focus:outline-none"
+                    className="w-full pl-3 pr-3 py-2 border-2 border-gray-300 rounded-lg text-sm bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:bg-white focus:outline-none"
                   />
-                  <div className="max-h-60 overflow-y-auto border rounded-lg mt-2">
-                    {(modelSearchTerm 
-                      ? uniqueModels.filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase()))
-                      : uniqueModels
-                    ).map(model => {
-                      const isSelected = filters.modelos.includes(model);
-                      return (
-                        <label key={model} className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleModel(model)}
-                            className="mr-2"
-                          />
-                          <span className="text-sm">{model}</span>
-                        </label>
-                      );
-                    })}
+                  
+                  {/* Lista de modelos con checkboxes */}
+                  <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg bg-white">
+                    {/* Mostrar mensaje si no hay texto de búsqueda */}
+                    {modelSearchTerm === '' && (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        💡 Escribe el nombre o parte del modelo para filtrar
+                      </div>
+                    )}
+                    
+                    {/* Mostrar modelos filtrados */}
+                    {modelSearchTerm !== '' && 
+                      uniqueModels
+                        .filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase()))
+                        .map(model => {
+                          const isSelected = filters.modelos.includes(model);
+                          return (
+                            <label 
+                              key={model} 
+                              className={`flex items-center px-3 py-2 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-gray-50 ${
+                                isSelected ? 'bg-blue-50' : 'bg-white'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleModel(model)}
+                                className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              />
+                              <span className={`text-sm ${isSelected ? 'font-semibold text-blue-900' : 'text-gray-800'}`}>
+                                {model}
+                              </span>
+                              {isSelected && (
+                                <span className="ml-auto text-blue-600">
+                                  <Check className="h-4 w-4" />
+                                </span>
+                              )}
+                            </label>
+                          );
+                        })
+                    }
+                    
+                    {/* Mensaje cuando no hay resultados */}
+                    {modelSearchTerm !== '' && 
+                      uniqueModels.filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase())).length === 0 && (
+                      <div className="p-4 text-center text-gray-500 text-sm">
+                        ❌ No se encontraron modelos con "{modelSearchTerm}"
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Botón para limpiar selecciones */}
+                  {filters.modelos.length > 0 && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={clearAllModels}
+                        className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      >
+                        🗑️ Limpiar selecciones ({filters.modelos.length})
+                      </button>
+                    </div>
+                  )}
+                  
+                  {/* Mostrar modelos seleccionados */}
+                  {filters.modelos.length > 0 && (
+                    <div className="text-xs text-gray-600">
+                      <strong>Seleccionados:</strong> {filters.modelos.slice(0, 3).join(', ')}
+                      {filters.modelos.length > 3 && ` y ${filters.modelos.length - 3} más...`}
+                    </div>
+                  )}
                 </div>
               </div>
 
