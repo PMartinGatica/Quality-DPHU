@@ -68,6 +68,29 @@ const DPHUDashboard = ({ isDarkMode }) => {
     return null;
   }, []);
 
+  // Función para extraer el nombre base del modelo automáticamente
+  const extractBaseModelName = useCallback((modeloOriginal) => {
+    if (!modeloOriginal) return null;
+    
+    // Patrón: L## - ########AR - NOMBRE_MODELO - Color
+    // Extraer el tercer segmento (nombre del modelo)
+    const segments = modeloOriginal.split(' - ');
+    if (segments.length < 3) return modeloOriginal; // Fallback si no tiene el formato esperado
+    
+    let modeloNombre = segments[2].trim().toUpperCase(); // ✅ CORREGIDO: usar índice 2, no 3
+    
+    // Limpiar sufijos y variantes comunes
+    modeloNombre = modeloNombre
+      .replace(/_256/g, '')           // Quitar _256
+      .replace(/_128/g, '')           // Quitar _128
+      .replace(/_512/g, '')           // Quitar _512
+      .replace(/\s+LITE\s+GO/g, ' LITE GO')  // Normalizar LITE GO
+      .replace(/\s+PLUS/g, ' PLUS')   // Normalizar PLUS
+      .trim();
+    
+    return modeloNombre;
+  }, []);
+
   // Aplicar filtros incluyendo el nuevo filtro de turno
   const applyAllFilters = useCallback(() => {
     let filtered = [...allData];
@@ -86,11 +109,12 @@ const DPHUDashboard = ({ isDarkMode }) => {
       );
     }
     
-    // Filtro por múltiples modelos
+    // Filtro por múltiples modelos usando nombre base
     if (filters.modelos && filters.modelos.length > 0) {
-      filtered = filtered.filter(item => 
-        filters.modelos.includes(item.MODELO)
-      );
+      filtered = filtered.filter(item => {
+        const baseModel = extractBaseModelName(item.MODELO);
+        return filters.modelos.includes(baseModel);
+      });
     }
 
     // Filtro por múltiples turnos - MODIFICADO
@@ -102,7 +126,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     }
 
     return filtered;
-  }, [allData, filters, getTurnoFromHora]);
+  }, [allData, filters, getTurnoFromHora, extractBaseModelName]);
 
   // Datos filtrados con memoization
   const finalFilteredData = useMemo(() => {
@@ -153,7 +177,32 @@ const DPHUDashboard = ({ isDarkMode }) => {
     }
   };
 
-  const uniqueModels = getUniqueModels();
+  // Reemplaza esta línea (alrededor de la línea 139):
+  // const uniqueModels = getUniqueModels();
+
+  // Por esta nueva implementación que usa extractBaseModelName:
+  const uniqueModels = useMemo(() => {
+    if (!allData || allData.length === 0) return [];
+    
+    const baseModels = [...new Set(allData
+      .map(item => extractBaseModelName(item.MODELO))
+      .filter(Boolean)
+      .sort()
+    )];
+    
+    return baseModels;
+  }, [allData, extractBaseModelName]);
+
+  // // Debug para verificar que funciona la normalización
+  useEffect(() => {
+    if (allData.length > 0) {
+      console.log('🔍 Modelos base extraídos:', uniqueModels);
+      console.log('📊 Muestra de conversiones:');
+      allData.slice(0, 10).forEach(item => {
+        console.log(`${item.MODELO} → ${extractBaseModelName(item.MODELO)}`);
+      });
+    }
+  }, [allData, uniqueModels, extractBaseModelName]);
 
   // Función para obtener fecha de hoy y ayer
   const getTodayAndYesterday = () => {
@@ -460,7 +509,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   />
                 </div>
 
-                {/* MODELOS - SECCIÓN FIJA CON BÚSQUEDA Y CHECKBOXES */}
+                {/* MODELOS - SECCIÓN CON BÚSQUEDA QUE DESPLIEGA AL ESCRIBIR */}
                 <div className="space-y-2">
                   <label className={`block text-sm font-medium ${themeClasses.text.secondary}`}>
                     🏭 Modelos ({filters.modelos.length})
@@ -475,18 +524,10 @@ const DPHUDashboard = ({ isDarkMode }) => {
                     className="w-full pl-3 pr-3 py-2 border-2 border-gray-300 rounded-lg text-sm bg-white text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:bg-white focus:outline-none"
                   />
                   
-                  {/* Lista de modelos con checkboxes */}
-                  <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg bg-white">
-                    {/* Mostrar mensaje si no hay texto de búsqueda */}
-                    {modelSearchTerm === '' && (
-                      <div className="p-4 text-center text-gray-500 text-sm">
-                        💡 Escribe el nombre o parte del modelo para filtrar
-                      </div>
-                    )}
-                    
-                    {/* Mostrar modelos filtrados */}
-                    {modelSearchTerm !== '' && 
-                      uniqueModels
+                  {/* Lista de modelos con checkboxes - SE MUESTRA SOLO AL ESCRIBIR */}
+                  {modelSearchTerm && modelSearchTerm.length >= 2 && (
+                    <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg bg-white shadow-lg">
+                      {uniqueModels
                         .filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase()))
                         .map(model => {
                           const isSelected = filters.modelos.includes(model);
@@ -514,16 +555,24 @@ const DPHUDashboard = ({ isDarkMode }) => {
                             </label>
                           );
                         })
-                    }
-                    
-                    {/* Mensaje cuando no hay resultados */}
-                    {modelSearchTerm !== '' && 
-                      uniqueModels.filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase())).length === 0 && (
-                      <div className="p-4 text-center text-gray-500 text-sm">
-                        ❌ No se encontraron modelos con "{modelSearchTerm}"
-                      </div>
-                    )}
-                  </div>
+                      }
+                      
+                      {/* Mensaje cuando no hay resultados */}
+                      {modelSearchTerm.length >= 2 && 
+                        uniqueModels.filter(model => model.toLowerCase().includes(modelSearchTerm.toLowerCase())).length === 0 && (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          ❌ No se encontraron modelos con "{modelSearchTerm}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Mensaje de ayuda cuando no hay búsqueda */}
+                  {!modelSearchTerm && (
+                    <div className="text-xs text-gray-500 italic">
+                      💡 Escribe al menos 2 letras para ver los modelos disponibles
+                    </div>
+                  )}
                   
                   {/* Botón para limpiar selecciones */}
                   {filters.modelos.length > 0 && (
