@@ -19,24 +19,24 @@ import {
 } from 'lucide-react';
 
 const DPHUDashboard = ({ isDarkMode }) => {
+  // ✅ TODOS LOS HOOKS DEBEN IR PRIMERO
   const [filters, setFilters] = useState({
     fecha_desde: '',
     fecha_hasta: '',
     modelos: [],
-    turno: [] // Cambiar de 'Todos' a array vacío
+    turno: []
   });
   
-  const [currentView, setCurrentView] = useState('pivot'); // Comenzar con pivot ya que existe
-  const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false); // Estado para contraer filtros MANUAL
-  const [showResults, setShowResults] = useState(false); // Estado para mostrar resultados solo cuando hay filtros aplicados
-  
-  // Estados para el selector de modelos
+  const [currentView, setCurrentView] = useState('pivot');
+  const [isFiltersCollapsed, setIsFiltersCollapsed] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [modelSearchTerm, setModelSearchTerm] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-
-  // Nuevos estados para el modal de selección de modelos
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [modelModalSearch, setModelModalSearch] = useState('');
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  const [autoUpdateStatus, setAutoUpdateStatus] = useState('waiting');
+  const [nextUpdateIn, setNextUpdateIn] = useState(600);
 
   const { 
     allData, 
@@ -49,109 +49,114 @@ const DPHUDashboard = ({ isDarkMode }) => {
     oldestLoadedDate,
     newestLoadedDate,
     fetchLatestData, 
+    fetchDataSilently, // ✅ Nueva función
     loadMoreHistoricalData,
     applyFilters, 
     getUniqueModels 
   } = useGoogleSheetsAPI();
 
-  // Función para determinar el turno basado en la hora
+  // ✅ TODOS LOS useCallback, useMemo, useEffect
   const getTurnoFromHora = useCallback((horaRechazo) => {
     if (!horaRechazo) return null;
-    
     const hora = horaRechazo.split(':')[0];
     const horaNum = parseInt(hora, 10);
-    
-    if (horaNum >= 6 && horaNum < 15) return 'TM'; // 06:00:00 - 14:59:59
-    if (horaNum >= 15 && horaNum <= 23) return 'TT'; // 15:00:00 - 23:59:59
-    if (horaNum >= 0 && horaNum < 6) return 'TN' ; // 00:00:00 - 05:59:59
-    
+    if (horaNum >= 6 && horaNum < 15) return 'TM';
+    if (horaNum >= 15 && horaNum <= 23) return 'TT';
+    if (horaNum >= 0 && horaNum < 6) return 'TN';
     return null;
   }, []);
 
-  // Función para extraer el nombre base del modelo automáticamente
   const extractBaseModelName = useCallback((modeloOriginal) => {
     if (!modeloOriginal) return null;
-    
-    // Patrón: L## - ########AR - NOMBRE_MODELO - Color
-    // Extraer el tercer segmento (nombre del modelo)
     const segments = modeloOriginal.split(' - ');
-    if (segments.length < 3) return modeloOriginal; // Fallback si no tiene el formato esperado
-    
-    let modeloNombre = segments[2].trim().toUpperCase(); // ✅ CORREGIDO: usar índice 2, no 3
-    
-    // Limpiar sufijos y variantes comunes
+    if (segments.length < 3) return modeloOriginal;
+    let modeloNombre = segments[2].trim().toUpperCase();
     modeloNombre = modeloNombre
-      .replace(/_256/g, '')           // Quitar _256
-      .replace(/_128/g, '')           // Quitar _128
-      .replace(/_512/g, '')           // Quitar _512
-      .replace(/\s+LITE\s+GO/g, ' LITE GO')  // Normalizar LITE GO
-      .replace(/\s+PLUS/g, ' PLUS')   // Normalizar PLUS
+      .replace(/_256/g, '')
+      .replace(/_128/g, '')
+      .replace(/_512/g, '')
+      .replace(/\s+LITE\s+GO/g, ' LITE GO')
+      .replace(/\s+PLUS/g, ' PLUS')
       .trim();
-    
     return modeloNombre;
   }, []);
 
-  // Aplicar filtros incluyendo el nuevo filtro de turno
   const applyAllFilters = useCallback(() => {
     let filtered = [...allData];
-    
-    // Filtro por fecha desde
     if (filters.fecha_desde) {
       filtered = filtered.filter(item => 
         item.FECHA_REPARACION >= filters.fecha_desde
       );
     }
-    
-    // Filtro por fecha hasta
     if (filters.fecha_hasta) {
       filtered = filtered.filter(item => 
         item.FECHA_REPARACION <= filters.fecha_hasta
       );
     }
-    
-    // Filtro por múltiples modelos usando nombre base
     if (filters.modelos && filters.modelos.length > 0) {
       filtered = filtered.filter(item => {
         const baseModel = extractBaseModelName(item.MODELO);
         return filters.modelos.includes(baseModel);
       });
     }
-
-    // Filtro por múltiples turnos - MODIFICADO
     if (filters.turno && filters.turno.length > 0) {
       filtered = filtered.filter(item => {
         const turno = getTurnoFromHora(item.HORA_RECHAZO);
         return filters.turno.includes(turno);
       });
     }
-
     return filtered;
   }, [allData, filters, getTurnoFromHora, extractBaseModelName]);
 
-  // Datos filtrados con memoization
+  const performBackgroundUpdate = useCallback(async () => {
+    try {
+      setAutoUpdateStatus('updating');
+      console.log('🔄 Actualizando datos en segundo plano...');
+      
+      // ✅ USAR LA NUEVA FUNCIÓN SILENCIOSA CON MEJOR MANEJO
+      const success = await fetchDataSilently();
+      
+      if (success) {
+        setLastUpdateTime(new Date().toLocaleTimeString());
+        setAutoUpdateStatus('success');
+        console.log('✅ Datos actualizados silenciosamente - UI preservada');
+        
+        // Mostrar estado de éxito por 2 segundos
+        setTimeout(() => {
+          setAutoUpdateStatus('waiting');
+        }, 2000);
+      } else {
+        // ⚠️ MANEJO SUAVE: No es un error crítico
+        console.log('⚠️ No se pudieron actualizar los datos - intentando en el próximo ciclo');
+        setAutoUpdateStatus('waiting'); // Volver a waiting sin mostrar error
+      }
+      
+      setNextUpdateIn(600); // Siempre resetear el contador
+      
+    } catch (error) {
+      console.error('❌ Error en actualización automática:', error);
+      setAutoUpdateStatus('error');
+      
+      // Error solo por 3 segundos, luego volver a waiting
+      setTimeout(() => {
+        setAutoUpdateStatus('waiting');
+      }, 3000);
+    }
+  }, [fetchDataSilently]); // ✅ Sin dependencias para evitar reseteos
+
+  const formatTimeRemaining = useCallback((seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }, []);
+
+  // ✅ TODOS LOS useMemo
   const finalFilteredData = useMemo(() => {
     return applyAllFilters();
   }, [applyAllFilters]);
 
-  // Detectar cuando hay filtros aplicados para mostrar resultados
-  useEffect(() => {
-    const hasFilters = filters.fecha_desde || 
-                      filters.fecha_hasta || 
-                      filters.modelos.length > 0 || 
-                      filters.turno.length > 0; // Cambiar condición
-    
-    setShowResults(hasFilters && !loading && allData.length > 0);
-  }, [filters, loading, allData.length]);
-
-  // Cargar datos iniciales
-  useEffect(() => {
-    fetchLatestData();
-  }, [fetchLatestData]);
-
-  // Obtener estadísticas de turnos
   const turnoStats = useMemo(() => {
     const stats = { TM: 0, TT: 0, TN: 0, sinTurno: 0 };
-    
     finalFilteredData.forEach(item => {
       const turno = getTurnoFromHora(item.HORA_RECHAZO);
       if (turno) {
@@ -160,10 +165,93 @@ const DPHUDashboard = ({ isDarkMode }) => {
         stats.sinTurno++;
       }
     });
-    
     return stats;
   }, [finalFilteredData, getTurnoFromHora]);
 
+  const uniqueModels = useMemo(() => {
+    if (!allData || allData.length === 0) return [];
+    const baseModels = [...new Set(allData
+      .map(item => extractBaseModelName(item.MODELO))
+      .filter(Boolean)
+      .sort()
+    )];
+    return baseModels;
+  }, [allData, extractBaseModelName]);
+
+  const filteredModels = useMemo(() => {
+    if (!modelSearchTerm || modelSearchTerm.length < 3) {
+      return uniqueModels;
+    }
+    const searchLower = modelSearchTerm.toLowerCase();
+    return uniqueModels.filter(model => 
+      model.toLowerCase().includes(searchLower)
+    );
+  }, [uniqueModels, modelSearchTerm]);
+
+  const filteredModalModels = useMemo(() => {
+    if (!modelModalSearch) return uniqueModels;
+    const searchLower = modelModalSearch.toLowerCase();
+    return uniqueModels.filter(model =>
+      model.toLowerCase().includes(searchLower)
+    );
+  }, [uniqueModels, modelModalSearch]);
+
+  // ✅ TODOS LOS useEffect
+  useEffect(() => {
+    const hasFilters = filters.fecha_desde || 
+                      filters.fecha_hasta || 
+                      filters.modelos.length > 0 || 
+                      filters.turno.length > 0;
+    setShowResults(hasFilters && !loading && allData.length > 0);
+  }, [filters, loading, allData.length]);
+
+  useEffect(() => {
+    fetchLatestData();
+  }, [fetchLatestData]);
+
+  useEffect(() => {
+    if (allData.length > 0) {
+      console.log('🔍 Modelos base extraídos:', uniqueModels);
+      console.log('📊 Muestra de conversiones:');
+      allData.slice(0, 10).forEach(item => {
+        console.log(`${item.MODELO} → ${extractBaseModelName(item.MODELO)}`);
+      });
+    }
+  }, [allData, uniqueModels, extractBaseModelName]);
+
+  useEffect(() => {
+    const updateInterval = setInterval(() => {
+      performBackgroundUpdate();
+    }, 10 * 60 * 1000);
+
+    const countdownInterval = setInterval(() => {
+      setNextUpdateIn(prev => {
+        if (prev <= 1) {
+          return 600;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(updateInterval);
+      clearInterval(countdownInterval);
+    };
+  }, [performBackgroundUpdate]);
+
+  // Agrega este useEffect temporal para debugging (después del debug de modelos):
+  useEffect(() => {
+    if (allData.length > 0) {
+      console.log('📊 Estado actual de datos:', {
+        totalRegistros: allData.length,
+        ultimaActualizacion: lastUpdateTime,
+        estadoActualizacion: autoUpdateStatus,
+        proximaActualizacion: `${Math.floor(nextUpdateIn / 60)}:${(nextUpdateIn % 60).toString().padStart(2, '0')}`
+      });
+    }
+  }, [allData.length, lastUpdateTime, autoUpdateStatus, nextUpdateIn]);
+
+  // ✅ VARIABLES REGULARES (no hooks)
   const themeClasses = {
     background: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
     card: isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
@@ -177,39 +265,10 @@ const DPHUDashboard = ({ isDarkMode }) => {
     }
   };
 
-  // Reemplaza esta línea (alrededor de la línea 139):
-  // const uniqueModels = getUniqueModels();
-
-  // Por esta nueva implementación que usa extractBaseModelName:
-  const uniqueModels = useMemo(() => {
-    if (!allData || allData.length === 0) return [];
-    
-    const baseModels = [...new Set(allData
-      .map(item => extractBaseModelName(item.MODELO))
-      .filter(Boolean)
-      .sort()
-    )];
-    
-    return baseModels;
-  }, [allData, extractBaseModelName]);
-
-  // // Debug para verificar que funciona la normalización
-  useEffect(() => {
-    if (allData.length > 0) {
-      console.log('🔍 Modelos base extraídos:', uniqueModels);
-      console.log('📊 Muestra de conversiones:');
-      allData.slice(0, 10).forEach(item => {
-        console.log(`${item.MODELO} → ${extractBaseModelName(item.MODELO)}`);
-      });
-    }
-  }, [allData, uniqueModels, extractBaseModelName]);
-
-  // Función para obtener fecha de hoy y ayer
   const getTodayAndYesterday = () => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
     return {
       today: today.toISOString().split('T')[0],
       yesterday: yesterday.toISOString().split('T')[0]
@@ -218,7 +277,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
 
   const { today, yesterday } = getTodayAndYesterday();
 
-  // Funciones para manejo de modelos múltiples
+  // ✅ FUNCIONES REGULARES
   const toggleModel = (model) => {
     setFilters(prev => ({
       ...prev,
@@ -232,7 +291,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
     setFilters(prev => ({ ...prev, modelos: [] }));
   };
 
-  // Función para manejar selección múltiple de turnos
   const toggleTurno = (turno) => {
     setFilters(prev => ({
       ...prev,
@@ -242,32 +300,11 @@ const DPHUDashboard = ({ isDarkMode }) => {
     }));
   };
 
-  // Filtrar modelos basado en búsqueda inteligente - CORREGIDO
-  const filteredModels = useMemo(() => {
-    if (!modelSearchTerm || modelSearchTerm.length < 3) {
-      return uniqueModels;
-    }
-    
-    const searchLower = modelSearchTerm.toLowerCase();
-    return uniqueModels.filter(model => 
-      model.toLowerCase().includes(searchLower)
-    );
-  }, [uniqueModels, modelSearchTerm]);
-
-  // Filtrado para el modal (si no ingresas nada muestra todos)
-  const filteredModalModels = useMemo(() => {
-    if (!modelModalSearch) return uniqueModels;
-    const searchLower = modelModalSearch.toLowerCase();
-    return uniqueModels.filter(model =>
-      model.toLowerCase().includes(searchLower)
-    );
-  }, [uniqueModels, modelModalSearch]);
-
-  // Componente de Carga Inicial con GIF
+  // Componente de Carga Inicial con GIF animado
   const InitialLoadingScreen = () => (
     <div className={`h-screen flex flex-col items-center justify-center ${themeClasses.background}`}>
       <div className="text-center">
-        {/* GIF de carga */}
+        {/* GIF de carga animado */}
         <div className="mb-8">
           <img 
             src="/logonewsnacarga.gif" 
@@ -389,11 +426,62 @@ const DPHUDashboard = ({ isDarkMode }) => {
     </div>
   );
 
+  // Componente para mostrar estado de actualización automática
+  const AutoUpdateIndicator = () => (
+    <div className="fixed bottom-4 right-4 z-50">
+      <div className={`p-3 rounded-lg shadow-lg border ${
+        autoUpdateStatus === 'updating' ? 'bg-blue-50 border-blue-200' :
+        autoUpdateStatus === 'success' ? 'bg-green-50 border-green-200' :
+        autoUpdateStatus === 'error' ? 'bg-red-50 border-red-200' :
+        'bg-gray-50 border-gray-200'
+      } transition-all duration-300`}>
+        <div className="flex items-center space-x-2 text-sm">
+          {autoUpdateStatus === 'updating' && (
+            <>
+              <Loader className="h-4 w-4 animate-spin text-blue-500" />
+              <span className="text-blue-700">Actualizando datos...</span>
+            </>
+          )}
+          
+          {autoUpdateStatus === 'success' && (
+            <>
+              <Check className="h-4 w-4 text-green-500" />
+              <span className="text-green-700">Datos actualizados</span>
+            </>
+          )}
+          
+          {autoUpdateStatus === 'error' && (
+            <>
+              <X className="h-4 w-4 text-red-500" />
+              <span className="text-red-700">Error al actualizar</span>
+            </>
+          )}
+          
+          {autoUpdateStatus === 'waiting' && (
+            <>
+              <RefreshCw className="h-4 w-4 text-gray-500" />
+              <span className="text-gray-700">
+                Próxima actualización: {formatTimeRemaining(nextUpdateIn)}
+              </span>
+            </>
+          )}
+        </div>
+        
+        {lastUpdateTime && (
+          <div className="text-xs text-gray-500 mt-1">
+            Última actualización: {lastUpdateTime}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   // Mostrar pantalla de carga inicial si los datos aún no están listos
   if (loading && allData.length === 0) {
     return <InitialLoadingScreen />;
   }
 
+  // ✅ RENDER PRINCIPAL
   return (
     <div className={`h-full flex flex-col ${themeClasses.background}`}>
       {/* Panel de filtros contraíble MANUAL - Z-INDEX MUY ALTO */}
@@ -413,6 +501,19 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   {finalFilteredData.length} de {allData.length}
                 </span>
               )}
+              
+              {/* Botón de actualización manual */}
+              <button
+                onClick={performBackgroundUpdate}
+                disabled={autoUpdateStatus === 'updating'}
+                className={`p-1 rounded-lg transition-colors ${themeClasses.button.secondary} hover:scale-105 ${
+                  autoUpdateStatus === 'updating' ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                title="Actualizar datos manualmente"
+              >
+                <RefreshCw className={`h-4 w-4 ${autoUpdateStatus === 'updating' ? 'animate-spin' : ''}`} />
+              </button>
+              
               {/* Mostrar filtros activos cuando está contraído */}
               {isFiltersCollapsed && (
                 <div className="flex items-center space-x-2 text-xs">
@@ -828,6 +929,9 @@ const DPHUDashboard = ({ isDarkMode }) => {
           </div>
         </div>
       )}
+
+      {/* Indicador de actualización automática */}
+      <AutoUpdateIndicator />
     </div>
   );
 };

@@ -163,6 +163,67 @@ export const useGoogleSheetsAPI = () => {
     return models.sort();
   }, [allData]);
 
+  // Reemplaza la función fetchDataSilently por esta versión corregida:
+  const fetchDataSilently = useCallback(async () => {
+    try {
+      console.log('🔄 Actualización silenciosa iniciada...');
+      
+      // ✅ USAR LA MISMA URL QUE fetchLatestData
+      const url = `${API_URL}?page=1&limit=5000`;
+      console.log('🌍 URL silenciosa:', url);
+      
+      const response = await fetch(url);
+      console.log('📊 Status silencioso:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('📦 Datos silenciosos recibidos:', result);
+      
+      // ✅ VERIFICAR ESTRUCTURA IGUAL QUE fetchLatestData
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      const processedData = result.data || [];
+      
+      if (Array.isArray(processedData) && processedData.length > 0) {
+        // ✅ ACTUALIZAR DATOS SIN CAMBIAR LOADING STATE
+        console.log(`🔄 Actualizando de ${allData.length} a ${processedData.length} registros`);
+        
+        setAllData(processedData);
+        setFilteredData(processedData); // También actualizar filteredData
+        setHasMoreData(result.hasMore || false);
+        setTotalAvailable(result.total || 0);
+        
+        // Actualizar rango de fechas
+        if (processedData.length > 0) {
+          const validDates = processedData
+            .map(item => item.FECHA_REPARACION)
+            .filter(date => date && date !== '' && date !== '1970-01-01')
+            .sort();
+          
+          if (validDates.length > 0) {
+            setOldestLoadedDate(validDates[0]);
+            setNewestLoadedDate(validDates[validDates.length - 1]);
+          }
+        }
+        
+        console.log(`✅ ${processedData.length} registros actualizados silenciosamente`);
+        return true;
+      } else {
+        console.log('⚠️ No se recibieron datos válidos');
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ Error en actualización silenciosa:', error);
+      return false;
+    }
+  }, []); // ✅ Sin dependencias para evitar cambios durante ejecución
+
   return {
     allData,
     filteredData,
@@ -174,6 +235,7 @@ export const useGoogleSheetsAPI = () => {
     oldestLoadedDate,
     newestLoadedDate,
     fetchLatestData,
+    fetchDataSilently, // ✅ Nueva función para actualización silenciosa
     loadMoreHistoricalData,
     applyFilters,
     getUniqueModels
