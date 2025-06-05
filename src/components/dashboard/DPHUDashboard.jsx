@@ -23,7 +23,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     fecha_desde: '',
     fecha_hasta: '',
     modelos: [],
-    turno: 'Todos' // Nuevo filtro de turno
+    turno: [] // Cambiar de 'Todos' a array vacío
   });
   
   const [currentView, setCurrentView] = useState('pivot'); // Comenzar con pivot ya que existe
@@ -93,11 +93,11 @@ const DPHUDashboard = ({ isDarkMode }) => {
       );
     }
 
-    // Nuevo filtro por turno
-    if (filters.turno && filters.turno !== 'Todos') {
+    // Filtro por múltiples turnos - MODIFICADO
+    if (filters.turno && filters.turno.length > 0) {
       filtered = filtered.filter(item => {
         const turno = getTurnoFromHora(item.HORA_RECHAZO);
-        return turno === filters.turno;
+        return filters.turno.includes(turno);
       });
     }
 
@@ -114,7 +114,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     const hasFilters = filters.fecha_desde || 
                       filters.fecha_hasta || 
                       filters.modelos.length > 0 || 
-                      filters.turno !== 'Todos';
+                      filters.turno.length > 0; // Cambiar condición
     
     setShowResults(hasFilters && !loading && allData.length > 0);
   }, [filters, loading, allData.length]);
@@ -181,6 +181,16 @@ const DPHUDashboard = ({ isDarkMode }) => {
 
   const clearAllModels = () => {
     setFilters(prev => ({ ...prev, modelos: [] }));
+  };
+
+  // Función para manejar selección múltiple de turnos
+  const toggleTurno = (turno) => {
+    setFilters(prev => ({
+      ...prev,
+      turno: prev.turno.includes(turno)
+        ? prev.turno.filter(t => t !== turno)
+        : [...prev.turno, turno]
+    }));
   };
 
   // Filtrar modelos basado en búsqueda inteligente - CORREGIDO
@@ -367,9 +377,9 @@ const DPHUDashboard = ({ isDarkMode }) => {
                       🏭 {filters.modelos.length} modelo{filters.modelos.length > 1 ? 's' : ''}
                     </span>
                   )}
-                  {filters.turno !== 'Todos' && (
+                  {filters.turno.length > 0 && (
                     <span className="bg-amber-100 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-2 py-1 rounded">
-                      ⏰ {filters.turno}
+                      ⏰ {filters.turno.length} turno{filters.turno.length > 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
@@ -546,13 +556,13 @@ const DPHUDashboard = ({ isDarkMode }) => {
                   </h3>
                 </div>
                 
-                {/* Grid de turnos - MÁS ESPACIADO */}
+                {/* Grid de turnos - SELECCIÓN MÚLTIPLE */}
                 <div className="grid grid-cols-3 gap-3">
                   {/* Turno Mañana */}
                   <button
-                    onClick={() => setFilters(prev => ({ ...prev, turno: 'TM' }))}
+                    onClick={() => toggleTurno('TM')}
                     className={`p-3 rounded-lg border-2 transition-all text-xs ${
-                      filters.turno === 'TM'
+                      filters.turno.includes('TM')
                         ? 'border-yellow-500 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200'
                         : 'border-gray-300 dark:border-gray-600 hover:border-yellow-400'
                     }`}
@@ -562,14 +572,17 @@ const DPHUDashboard = ({ isDarkMode }) => {
                       <div className="text-xs font-semibold">TM</div>
                       <div className="text-xs text-gray-500">06-15h</div>
                       <div className="text-xs font-medium">{showResults ? turnoStats.TM : 0}</div>
+                      {filters.turno.includes('TM') && (
+                        <Check className="h-3 w-3 mx-auto mt-1 text-yellow-600" />
+                      )}
                     </div>
                   </button>
 
                   {/* Turno Tarde */}
                   <button
-                    onClick={() => setFilters(prev => ({ ...prev, turno: 'TT' }))}
+                    onClick={() => toggleTurno('TT')}
                     className={`p-3 rounded-lg border-2 transition-all text-xs ${
-                      filters.turno === 'TT'
+                      filters.turno.includes('TT')
                         ? 'border-orange-500 bg-orange-100 dark:bg-orange-800 text-orange-800 dark:text-orange-200'
                         : 'border-gray-300 dark:border-gray-600 hover:border-orange-400'
                     }`}
@@ -579,14 +592,17 @@ const DPHUDashboard = ({ isDarkMode }) => {
                       <div className="text-xs font-semibold">TT</div>
                       <div className="text-xs text-gray-500">15-23h</div>
                       <div className="text-xs font-medium">{showResults ? turnoStats.TT : 0}</div>
+                      {filters.turno.includes('TT') && (
+                        <Check className="h-3 w-3 mx-auto mt-1 text-orange-600" />
+                      )}
                     </div>
                   </button>
 
                   {/* Turno Noche */}
                   <button
-                    onClick={() => setFilters(prev => ({ ...prev, turno: 'TN' }))}
+                    onClick={() => toggleTurno('TN')}
                     className={`p-3 rounded-lg border-2 transition-all text-xs ${
-                      filters.turno === 'TN'
+                      filters.turno.includes('TN')
                         ? 'border-indigo-500 bg-indigo-100 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200'
                         : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
                     }`}
@@ -596,9 +612,24 @@ const DPHUDashboard = ({ isDarkMode }) => {
                       <div className="text-xs font-semibold">TN</div>
                       <div className="text-xs text-gray-500">00-05h</div>
                       <div className="text-xs font-medium">{showResults ? turnoStats.TN : 0}</div>
+                      {filters.turno.includes('TN') && (
+                        <Check className="h-3 w-3 mx-auto mt-1 text-indigo-600" />
+                      )}
                     </div>
                   </button>
                 </div>
+
+                {/* Botón para limpiar turnos seleccionados */}
+                {filters.turno.length > 0 && (
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={() => setFilters(prev => ({ ...prev, turno: [] }))}
+                      className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                    >
+                      🗑️ Limpiar turnos ({filters.turno.length})
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Información de datos cargados */}
