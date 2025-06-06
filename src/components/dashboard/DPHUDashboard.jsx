@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 
 const DPHUDashboard = ({ isDarkMode }) => {
-  // ✅ TODOS LOS HOOKS DEBEN IR PRIMERO
+  // ✅ TODOS LOS HOOKS PRIMERO
   const [filters, setFilters] = useState({
     fecha_desde: '',
     fecha_hasta: '',
@@ -81,68 +81,84 @@ const DPHUDashboard = ({ isDarkMode }) => {
     return modeloNombre;
   }, []);
 
+  const adjustDateForShiftLogic = useCallback((fechaRechazo, horaRechazo) => {
+    if (!fechaRechazo || !horaRechazo) return fechaRechazo;
+    
+    const hora = horaRechazo.split(':')[0];
+    const horaNum = parseInt(hora, 10);
+    
+    // ✅ Si la hora es antes de las 06:00, considerarla del día anterior
+    if (horaNum < 6) {
+      const fecha = new Date(fechaRechazo);
+      fecha.setDate(fecha.getDate() - 1); // Restar un día
+      return fecha.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    }
+    
+    return fechaRechazo; // Mantener fecha original si es después de las 06:00
+  }, []);
+
   const applyAllFilters = useCallback(() => {
     let filtered = [...allData];
+    
+    // ✅ FILTROS POR FECHA CON LÓGICA DE TURNOS AJUSTADA
     if (filters.fecha_desde) {
-      filtered = filtered.filter(item => 
-        item.FECHA_REPARACION >= filters.fecha_desde
-      );
+      filtered = filtered.filter(item => {
+        const fechaAjustada = adjustDateForShiftLogic(item.FECHA_RECHAZO, item.HORA_RECHAZO);
+        return fechaAjustada >= filters.fecha_desde;
+      });
     }
+    
     if (filters.fecha_hasta) {
-      filtered = filtered.filter(item => 
-        item.FECHA_REPARACION <= filters.fecha_hasta
-      );
+      filtered = filtered.filter(item => {
+        const fechaAjustada = adjustDateForShiftLogic(item.FECHA_RECHAZO, item.HORA_RECHAZO);
+        return fechaAjustada <= filters.fecha_hasta;
+      });
     }
+    
     if (filters.modelos && filters.modelos.length > 0) {
       filtered = filtered.filter(item => {
         const baseModel = extractBaseModelName(item.MODELO);
         return filters.modelos.includes(baseModel);
       });
     }
+    
     if (filters.turno && filters.turno.length > 0) {
       filtered = filtered.filter(item => {
         const turno = getTurnoFromHora(item.HORA_RECHAZO);
         return filters.turno.includes(turno);
       });
     }
+    
     return filtered;
-  }, [allData, filters, getTurnoFromHora, extractBaseModelName]);
+  }, [allData, filters, getTurnoFromHora, extractBaseModelName, adjustDateForShiftLogic]);
 
   const performBackgroundUpdate = useCallback(async () => {
     try {
       setAutoUpdateStatus('updating');
-      console.log('🔄 Actualizando datos en segundo plano...');
       
-      // ✅ USAR LA NUEVA FUNCIÓN SILENCIOSA CON MEJOR MANEJO
       const success = await fetchDataSilently();
       
       if (success) {
         setLastUpdateTime(new Date().toLocaleTimeString());
         setAutoUpdateStatus('success');
-        console.log('✅ Datos actualizados silenciosamente - UI preservada');
         
-        // Mostrar estado de éxito por 2 segundos
         setTimeout(() => {
           setAutoUpdateStatus('waiting');
         }, 2000);
       } else {
-        // ⚠️ MANEJO SUAVE: No es un error crítico
-        console.log('⚠️ No se pudieron actualizar los datos - intentando en el próximo ciclo');
-        setAutoUpdateStatus('waiting'); // Volver a waiting sin mostrar error
+        setAutoUpdateStatus('waiting');
       }
       
-      setNextUpdateIn(600); // Siempre resetear el contador
+      setNextUpdateIn(600);
       
     } catch (error) {
-      console.error('❌ Error en actualización automática:', error);
       setAutoUpdateStatus('error');
       
-      // Error solo por 3 segundos, luego volver a waiting
       setTimeout(() => {
         setAutoUpdateStatus('waiting');
       }, 3000);
     }
-  }, [fetchDataSilently]); // ✅ Sin dependencias para evitar reseteos
+  }, [fetchDataSilently]);
 
   const formatTimeRemaining = useCallback((seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -210,16 +226,6 @@ const DPHUDashboard = ({ isDarkMode }) => {
   }, [fetchLatestData]);
 
   useEffect(() => {
-    if (allData.length > 0) {
-      console.log('🔍 Modelos base extraídos:', uniqueModels);
-      console.log('📊 Muestra de conversiones:');
-      allData.slice(0, 10).forEach(item => {
-        console.log(`${item.MODELO} → ${extractBaseModelName(item.MODELO)}`);
-      });
-    }
-  }, [allData, uniqueModels, extractBaseModelName]);
-
-  useEffect(() => {
     const updateInterval = setInterval(() => {
       performBackgroundUpdate();
     }, 10 * 60 * 1000);
@@ -239,32 +245,7 @@ const DPHUDashboard = ({ isDarkMode }) => {
     };
   }, [performBackgroundUpdate]);
 
-  // Agrega este useEffect temporal para debugging (después del debug de modelos):
-  useEffect(() => {
-    if (allData.length > 0) {
-      console.log('📊 Estado actual de datos:', {
-        totalRegistros: allData.length,
-        ultimaActualizacion: lastUpdateTime,
-        estadoActualizacion: autoUpdateStatus,
-        proximaActualizacion: `${Math.floor(nextUpdateIn / 60)}:${(nextUpdateIn % 60).toString().padStart(2, '0')}`
-      });
-    }
-  }, [allData.length, lastUpdateTime, autoUpdateStatus, nextUpdateIn]);
-
-  // ✅ VARIABLES REGULARES (no hooks)
-  const themeClasses = {
-    background: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
-    card: isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
-    text: {
-      primary: isDarkMode ? 'text-white' : 'text-gray-900',
-      secondary: isDarkMode ? 'text-gray-300' : 'text-gray-600'
-    },
-    button: {
-      primary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
-      secondary: isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-    }
-  };
-
+  // ✅ MOVER ESTAS FUNCIONES Y VARIABLES AQUÍ (ANTES de themeClasses)
   const getTodayAndYesterday = () => {
     const today = new Date();
     const yesterday = new Date(today);
@@ -298,6 +279,20 @@ const DPHUDashboard = ({ isDarkMode }) => {
         ? prev.turno.filter(t => t !== turno)
         : [...prev.turno, turno]
     }));
+  };
+
+  // ✅ AHORA SÍ: themeClasses
+  const themeClasses = {
+    background: isDarkMode ? 'bg-gray-900' : 'bg-gray-50',
+    card: isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
+    text: {
+      primary: isDarkMode ? 'text-white' : 'text-gray-900',
+      secondary: isDarkMode ? 'text-gray-300' : 'text-gray-600'
+    },
+    button: {
+      primary: isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600',
+      secondary: isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
+    }
   };
 
   // Componente de Carga Inicial con GIF animado
@@ -369,7 +364,8 @@ const DPHUDashboard = ({ isDarkMode }) => {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Modelo</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Función</th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Fecha</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">NS</th> {/* ✅ NUEVA COLUMNA */}
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Fecha Rechazo</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Hora</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Turno</th>
               </tr>
@@ -379,7 +375,14 @@ const DPHUDashboard = ({ isDarkMode }) => {
                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-3 text-sm">{item.MODELO || '-'}</td>
                   <td className="px-4 py-3 text-sm">{item.FUNCION || '-'}</td>
-                  <td className="px-4 py-3 text-sm">{item.FECHA_REPARACION || '-'}</td>
+                  <td className="px-4 py-3 text-sm"> {/* ✅ NUEVA CELDA */}
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      item.NS ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {item.NS || 'Sin NS'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm">{item.FECHA_RECHAZO || '-'}</td>
                   <td className="px-4 py-3 text-sm">{item.HORA_RECHAZO || '-'}</td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${

@@ -23,20 +23,14 @@ export const useGoogleSheetsAPI = () => {
     setCurrentPage(1);
     
     try {
-      console.log('🔄 Cargando datos iniciales...');
-      
       const url = `${API_URL}?page=1&limit=5000`;
-      console.log('🌍 URL:', url);
-      
       const response = await fetch(url);
-      console.log('📊 Status:', response.status);
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const result = await response.json();
-      console.log('📦 Datos recibidos:', result);
       
       if (result.error) {
         throw new Error(result.error);
@@ -52,7 +46,7 @@ export const useGoogleSheetsAPI = () => {
       // Calcular rango de fechas cargadas
       if (processedData.length > 0) {
         const validDates = processedData
-          .map(item => item.FECHA_REPARACION)
+          .map(item => item.FECHA_RECHAZO) // ✅ CAMBIAR A FECHA_RECHAZO
           .filter(date => date && date !== '' && date !== '1970-01-01')
           .sort();
         
@@ -62,10 +56,7 @@ export const useGoogleSheetsAPI = () => {
         }
       }
       
-      console.log(`✅ Cargados ${processedData.length} registros iniciales`);
-      
     } catch (err) {
-      console.error('❌ Error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -79,8 +70,6 @@ export const useGoogleSheetsAPI = () => {
     setLoadingMore(true);
     
     try {
-      console.log(`📊 Cargando página ${currentPage + 1}...`);
-      
       const url = `${API_URL}?page=${currentPage + 1}&limit=5000`;
       const response = await fetch(url);
       const result = await response.json();
@@ -100,7 +89,7 @@ export const useGoogleSheetsAPI = () => {
       // Actualizar rango de fechas
       if (newData.length > 0) {
         const validDates = combinedData
-          .map(item => item.FECHA_REPARACION)
+          .map(item => item.FECHA_RECHAZO) // ✅ CAMBIAR A FECHA_RECHAZO
           .filter(date => date && date !== '' && date !== '1970-01-01')
           .sort();
         
@@ -110,10 +99,7 @@ export const useGoogleSheetsAPI = () => {
         }
       }
       
-      console.log(`✅ Cargados ${newData.length} registros adicionales. Total: ${combinedData.length}`);
-      
     } catch (err) {
-      console.error('❌ Error cargando más datos:', err);
       setError(err.message);
     } finally {
       setLoadingMore(false);
@@ -122,8 +108,6 @@ export const useGoogleSheetsAPI = () => {
 
   // Aplicar filtros SOLO localmente (sin recargar datos del servidor)
   const applyFilters = useCallback((filters) => {
-    console.log('🔍 Aplicando filtros localmente:', filters);
-    
     let filtered = [...allData];
     
     // Filtro por fecha desde
@@ -154,7 +138,6 @@ export const useGoogleSheetsAPI = () => {
       );
     }
     
-    console.log(`🎯 Filtrado completo: ${filtered.length} de ${allData.length} registros`);
     setFilteredData(filtered);
   }, [allData]);
 
@@ -166,23 +149,15 @@ export const useGoogleSheetsAPI = () => {
   // Reemplaza la función fetchDataSilently por esta versión corregida:
   const fetchDataSilently = useCallback(async () => {
     try {
-      console.log('🔄 Actualización silenciosa iniciada...');
-      
-      // ✅ USAR LA MISMA URL QUE fetchLatestData
       const url = `${API_URL}?page=1&limit=5000`;
-      console.log('🌍 URL silenciosa:', url);
-      
       const response = await fetch(url);
-      console.log('📊 Status silencioso:', response.status);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const result = await response.json();
-      console.log('📦 Datos silenciosos recibidos:', result);
       
-      // ✅ VERIFICAR ESTRUCTURA IGUAL QUE fetchLatestData
       if (result.error) {
         throw new Error(result.error);
       }
@@ -190,9 +165,6 @@ export const useGoogleSheetsAPI = () => {
       const processedData = result.data || [];
       
       if (Array.isArray(processedData) && processedData.length > 0) {
-        // ✅ ACTUALIZAR DATOS SIN CAMBIAR LOADING STATE
-        console.log(`🔄 Actualizando de ${allData.length} a ${processedData.length} registros`);
-        
         setAllData(processedData);
         setFilteredData(processedData); // También actualizar filteredData
         setHasMoreData(result.hasMore || false);
@@ -201,7 +173,7 @@ export const useGoogleSheetsAPI = () => {
         // Actualizar rango de fechas
         if (processedData.length > 0) {
           const validDates = processedData
-            .map(item => item.FECHA_REPARACION)
+            .map(item => item.FECHA_RECHAZO) // ✅ CAMBIAR A FECHA_RECHAZO
             .filter(date => date && date !== '' && date !== '1970-01-01')
             .sort();
           
@@ -211,15 +183,12 @@ export const useGoogleSheetsAPI = () => {
           }
         }
         
-        console.log(`✅ ${processedData.length} registros actualizados silenciosamente`);
         return true;
       } else {
-        console.log('⚠️ No se recibieron datos válidos');
         return false;
       }
       
     } catch (error) {
-      console.error('❌ Error en actualización silenciosa:', error);
       return false;
     }
   }, []); // ✅ Sin dependencias para evitar cambios durante ejecución
